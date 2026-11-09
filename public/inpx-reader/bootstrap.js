@@ -13,6 +13,36 @@ import {
 } from './reader-shared/pending-position-revision.js';
 import { positionsDiffer } from './reader-shared/position-revision.js';
 
+// Polyfills for engines older than ES2024 (e.g. MEEBOOK M7 ships Chromium/WebView 116).
+// foliate/epub.js calls Object.groupBy()/Map.groupBy() while parsing OPF metadata;
+// without them the reader module throws at import time and the book never opens.
+if (typeof Object.groupBy !== 'function') {
+  Object.groupBy = function (items, keyFn) {
+    const out = Object.create(null);
+    for (const item of items) {
+      const key = keyFn(item);
+      if (!out[key]) out[key] = [];
+      out[key].push(item);
+    }
+    return out;
+  };
+}
+if (typeof Map.groupBy !== 'function') {
+  Map.groupBy = function (iterable, keyFn) {
+    const out = new Map();
+    for (const item of iterable) {
+      const key = keyFn(item);
+      let bucket = out.get(key);
+      if (!bucket) {
+        bucket = [];
+        out.set(key, bucket);
+      }
+      bucket.push(item);
+    }
+    return out;
+  };
+}
+
 // Same opt-in flag as src/lib/debugSessionLog.ts — off in normal use (console + localStorage per event).
 const DEBUG_LOG_ENABLED = (() => {
   try { return localStorage.getItem('inpx_debug_log') === '1'; } catch { return false; }

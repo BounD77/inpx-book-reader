@@ -263,6 +263,15 @@ public class MainActivity extends BridgeActivity {
                 dispatchVolumePageTurn("prev");
                 return true;
             }
+            // MEEBOOK M7: физические кнопки листания (верхняя/нижняя), не громкость.
+            if (keyCode == KeyEvent.KEYCODE_PAGE_UP) {
+                dispatchVolumePageTurn("prev");
+                return true;
+            }
+            if (keyCode == KeyEvent.KEYCODE_PAGE_DOWN) {
+                dispatchVolumePageTurn("next");
+                return true;
+            }
         }
         return super.dispatchKeyEvent(event);
     }

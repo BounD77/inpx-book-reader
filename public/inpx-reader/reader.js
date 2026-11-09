@@ -890,7 +890,7 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
     const ti = Number(S.textIndent);
     S.textIndent = Number.isFinite(ti) ? Math.min(3, Math.max(0, ti)) : defaults.textIndent;
     normalizeTtsSettings(S);
-    if (S.volumeKeys !== 'normal' && S.volumeKeys !== 'inverted') S.volumeKeys = defaults.volumeKeys;
+    if (S.volumeKeys !== 'normal' && S.volumeKeys !== 'inverted' && S.volumeKeys !== 'off') S.volumeKeys = defaults.volumeKeys;
     const af = Number(S.autoFlipSec);
     S.autoFlipSec = Number.isFinite(af) ? Math.min(30, Math.max(0, Math.round(af))) : defaults.autoFlipSec;
     S.tapZonesShort = normalizeTapZones(S.tapZonesShort, defaultTapZonesShort());
@@ -4579,6 +4579,7 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
       '<div class="rs-seg">' +
       '<button type="button" data-set-volume-keys="normal">' + rt('app.volumeForward') + '</button>' +
       '<button type="button" data-set-volume-keys="inverted">' + rt('app.volumeBack') + '</button>' +
+      '<button type="button" data-set-volume-keys="off">' + rt('app.volumeKeysOff') + '</button>' +
       '</div>' +
       '<div class="rs-hint">' + rt('app.volumeKeysHint') + '</div>';
     if (slot) slot.appendChild(group);
@@ -4586,6 +4587,7 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
   }
 
   function handleVolumePageTurn(direction) {
+    if (S.volumeKeys === 'off') return;
     let mapped = direction === 'next' ? 'next' : 'prev';
     if (S.volumeKeys === 'inverted') {
       mapped = mapped === 'next' ? 'prev' : 'next';
