@@ -25,6 +25,7 @@ release/
 
 # Agent tooling (local)
 .agents/
+.claude/
 skills-lock.json
 scripts/cdp-eval.cjs
 scripts/cdp-eval.js
@@ -32,6 +33,12 @@ scripts/cdp-eval.js
 # Local editor / agent config
 .cursor/
 .vscode/
+
+# M7 project: local toolchain + build artifacts + decompile output (machine-specific / large)
+development/
+builds/
+reference/haoqing/decoded/
+reference/haoqing/original/
 
 # Local scratch / emulator output
 .tmp-emu/

@@ -1,0 +1,33 @@
+# Haoqing-Launcher.apk — package info
+
+- Путь: `reference/haoqing/original/Haoqing-Launcher.apk` (105 742 016 байт)
+- SHA-256: `b6fc4c10784b73ce1edaaad85f832ce67eb847e9fa1dde2127beddccb24489df`
+- Package: `com.haoqing.app.hqreader`
+- versionName: **2.1.1316** · versionCode: 2026080614 (дата сборки 2026-08-06 14:xx)
+- minSdk: **21** · targetSdk: **27** · compileSdk: **28** (Android 9)
+- **sharedUserId: `android.uid.system`** (системное приложение, platform-подпись)
+- Подпись: CN=haoqing, O=haoqing, ShenZhen; SHA-256 `98d7e54a6303ef7b721bada3a98ae292eec02d7b0a6aa9abd65ce9118f6b09d5`
+- ABI: только **armeabi-v7a** (32-бит)
+
+## DEX (7 файлов, всего 12 452 класса по JADX)
+
+| Файл | Размер |
+|---|---|
+| classes.dex | 8.39 МБ |
+| classes2.dex | 8.09 МБ |
+| classes3.dex | 4.94 МБ |
+| classes4.dex | 3.25 МБ |
+| classes5.dex | 7.60 МБ |
+| classes6.dex | 9.48 МБ |
+| classes7.dex | 1.03 МБ |
+
+## Ключевые собственные пакеты (число .java по JADX)
+
+`com.haoqing.app` (409, launcher/читалка), `jdlibrary` (226, магазин — наследие JD),
+`engine` (131, движок ридера), `note` (106, заметки/рукописи), `view` (88), `dict` (81),
+`hw` (22, E-Ink/ручка через натив), `api` (22, системные хаки по платформе), `odm` (2), `hook` (2).
+
+## Launcher-роль
+
+`LauncherActivity`/`MainActivity` зарегистрированы с `android.intent.category.HOME`
+— приложение является **системным лаунчером** устройства (рабочий стол), не просто читалкой.

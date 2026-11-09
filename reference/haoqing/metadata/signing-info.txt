@@ -1,0 +1,8 @@
+Signer #1 certificate DN: EMAILADDRESS=dev@haoqing-tech.com, CN=haoqing, OU=haoqing, O=haoqing, L=ShenZhen View, ST=ShenZhen, C=CN
+Signer #1 certificate SHA-256 digest: 98d7e54a6303ef7b721bada3a98ae292eec02d7b0a6aa9abd65ce9118f6b09d5
+Signer #1 certificate SHA-1 digest: f159ba98cfa385b4a9e187ae39d9ac2c40306fe8
+Signer #1 certificate MD5 digest: 06e8e7b8b53cb3b9390c246b243dbc60
+WARNING: META-INF/android.support.design_material.version not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+WARNING: META-INF/androidx.activity_activity.version not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+WARNING: META-INF/androidx.appcompat_appcompat-resources.version not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+WARNING: META-INF/androidx.appcompat_appcompat.version not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
