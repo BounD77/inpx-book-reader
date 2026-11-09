@@ -1,5 +1,38 @@
 # Change Log — INPX Book Reader MEEBOOK M7
 
+## 2026-11-09 — R1.13.0-m7.3 (задача 1: меню выбора шрифта + офлайн-шрифты)
+
+**Проблема.** На M7 «Шрифт»/«Начертание» в настройках — системные `<select>`:
+на Chromium 116 e-ink WebView нативный popup не рендерится (моргает при нажатии,
+не открывается). Кроме того, «Google-шрифты» требовали сети
+(fonts.googleapis.com), офлайн все шрифты сливались в системный дефолт.
+
+**Реализация.**
+- `public/inpx-reader/reader.js`: DOM-пикер `enhanceSelectBox`/`closeRsSelectx`
+  (строки ~762-856) — раскрываемый список вместо нативного popup: список inline
+  в потоке (не `position:absolute`), заголовки групп из `o.parentNode`
+  (`Array.from(select.options)` — `for...of` по HTMLCollection не работает на
+  Chromium 116), выбор = `select.value + change`, закрытие по клику вне/Escape.
+  Вызывается в `refreshSettingsUI` для `rs-font-family`/`rs-font-weight`;
+  закрывается в `finishClosePanel`.
+- `public/inpx-reader/reader.css`: стили `.rs-selectx*` + e-ink-варианты
+  (`html[data-eink="1"]`).
+- Офлайн-шрифты: `public/inpx-reader/fonts/` — **96 woff2** (12 семейств:
+  PT Serif, PT Sans, Literata, Merriweather, Noto Serif, EB Garamond, Spectral,
+  IBM Plex Serif, Roboto, Fira Sans, IBM Plex Sans, Commissioner;
+  cyrillic/cyrillic-ext/latin/latin-ext × 400/700) + сгенерированный
+  `reader-fonts.css` (`@font-face`, `unicode-range`, `font-display:swap`).
+  `scripts/bundle-reader-fonts.mjs` — воспроизводимый бандлер (запуск один раз,
+  сеть; результат коммитится). `googleFontCssUrl()` (reader.js:688) теперь
+  отдаёт локальный `/inpx-reader/fonts/reader-fonts.css` — все 3 точки
+  подключения (head, iframe Foliate, @import) работают офлайн; реестры
+  семейств и механизм не трогались. Пересобраны `index.html`/`index.en.html`
+  (`npm run sync:reader`).
+
+**Проверка.** `node --check reader.js` — чисто; сборка `npm run build:android`
+— успешно, APK установлен на M7 (WebView 116, Wi-Fi выкл). Live-проверка
+меню и смены шрифта — выполнена пользователем вручную, работает.
+
 ## 2026-11-08 — R1.13.0-m7.2 (задача 9.3: физические кнопки M7)
 
 **Задача.** Верхняя кнопка = предыдущая страница, нижняя = следующая; долгое

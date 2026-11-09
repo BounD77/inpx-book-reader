@@ -686,9 +686,11 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
     ...Object.entries(GOOGLE_FONTS).map(([k, v]) => [k, v.stack]),
   ]);
   const loadedGoogleFonts = new Set();
-  function googleFontCssUrl(def) {
-    const family = def.family.trim().replace(/\s+/g, '+');
-    return `https://fonts.googleapis.com/css2?family=${family}:wght@${def.weights || '400;700'}&display=swap`;
+  function googleFontCssUrl() {
+    // Офлайн: все читательские шрифты (12 семейств, cyrillic+latin, 400/700) — в одном
+    // локальном CSS. Каширование сбрасываем по версии ассетов ридера.
+    const v = window.__READER_ASSET_V__ || '';
+    return '/inpx-reader/fonts/reader-fonts.css' + (v ? '?v=' + v : '');
   }
   function ensureGoogleFont(key) {
     const def = GOOGLE_FONTS[key];
@@ -754,6 +756,108 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
     if (!(cur in fontMap)) S.font = defaults.font;
     sel.value = S.font;
   }
+
+  /* Кастомный выбор для нативных <select> (шрифт, начертание). На e-ink WebView M7
+     системный popup <select> не рендерится (моргает / не открывается) — рисуем выбор в DOM.
+     Скрытый <select> остаётся источником данных; опции читаем на лету из select.options. */
+  let rsSelectxOpen = null;
+  function closeRsSelectx() {
+    if (!rsSelectxOpen) return;
+    const list = rsSelectxOpen.listEl;
+    const btn = rsSelectxOpen.btn;
+    rsSelectxOpen = null;
+    list.hidden = true;
+    list.removeAttribute('data-open');
+    btn.setAttribute('aria-expanded', 'false');
+  }
+  function enhanceSelectBox(select) {
+    if (!select || select.__rsSelectx) return;
+    const wrap = document.createElement('span');
+    wrap.className = 'rs-selectx';
+    select.parentNode.insertBefore(wrap, select);
+    wrap.appendChild(select);
+    select.style.display = 'none';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'rs-selectx-btn';
+    btn.setAttribute('role', 'combobox');
+    btn.setAttribute('aria-haspopup', 'listbox');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = '<span class="rs-selectx-val"></span><span class="rs-selectx-chev" aria-hidden="true">⌄</span>';
+
+    const list = document.createElement('div');
+    list.className = 'rs-selectx-list';
+    list.setAttribute('role', 'listbox');
+    list.hidden = true;
+
+    const openState = { listEl: list, btn };
+    wrap.appendChild(btn);
+    wrap.appendChild(list);
+    select.__rsSelectx = true;
+
+    function selectedLabel() {
+      const o = select.selectedOptions?.[0] || select.options[select.selectedIndex];
+      return o ? o.textContent : '';
+    }
+    function reflectBtn() {
+      btn.querySelector('.rs-selectx-val').textContent = selectedLabel();
+      btn.disabled = select.disabled;
+      btn.setAttribute('aria-disabled', select.disabled ? 'true' : 'false');
+    }
+    function buildOptions() {
+      list.replaceChildren();
+      const appendOpt = (o) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'rs-selectx-opt';
+        b.setAttribute('role', 'option');
+        b.innerHTML = '<span class="rs-selectx-name"></span><span class="rs-selectx-check" aria-hidden="true">✓</span>';
+        b.querySelector('.rs-selectx-name').textContent = o.textContent;
+        if (o.value === select.value) b.classList.add('is-active');
+        b.addEventListener('click', () => {
+          select.value = o.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          reflectBtn();
+          closeRsSelectx();
+        });
+        list.appendChild(b);
+      };
+      // Итерируем select.options (всегда определён), группу берём из parentNode.
+      // (for...of по select.children/node.options падает на Chromium 116 e-ink WebView.)
+      let lastGroup = select;
+      for (const o of Array.from(select.options)) {
+        const g = o.parentNode;
+        if (g !== lastGroup) {
+          lastGroup = g;
+          if (g && g.tagName === 'OPTGROUP') {
+            const header = document.createElement('div');
+            header.className = 'rs-selectx-group';
+            header.textContent = g.label;
+            list.appendChild(header);
+          }
+        }
+        appendOpt(o);
+      }
+    }
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (rsSelectxOpen === openState) { closeRsSelectx(); return; }
+      closeRsSelectx();
+      if (select.disabled) return;
+      buildOptions();
+      list.hidden = false;
+      list.setAttribute('data-open', '1');
+      btn.setAttribute('aria-expanded', 'true');
+      rsSelectxOpen = openState;
+    });
+    select.__rsSelectxReflect = reflectBtn;
+    reflectBtn();
+  }
+  // закрываем при клике вне / Escape / закрытии панели настроек
+  document.addEventListener('click', () => closeRsSelectx());
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeRsSelectx(); }, true);
+
   function readerSideMarginPx() {
     return Math.max(0, Math.min(80, Number(S.pageMargin) || 0));
   }
@@ -4059,6 +4163,7 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
     });
   }
   function finishClosePanel() {
+    closeRsSelectx();
     sheetGen += 1;
     sheetHandle?.cancel();
     sheetHandle = null;
@@ -5010,6 +5115,10 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
       fs.value = S.font;
       fs.disabled = S.usePublisherFont === true;
     }
+    enhanceSelectBox($('rs-font-family'));
+    enhanceSelectBox($('rs-font-weight'));
+    $('rs-font-family')?.__rsSelectxReflect?.();
+    $('rs-font-weight')?.__rsSelectxReflect?.();
     const sync = (id, v) => { const el = $(id); if (el) el.value !== undefined ? el.value = v : el.textContent = v; };
     sync('rs-font-size', S.fontSize); sync('rs-font-size-val', S.fontSize);
     sync('rs-line-height', S.lineHeight); sync('rs-line-height-val', Number(S.lineHeight).toFixed(1));

@@ -903,6 +903,45 @@ body.chrome-hidden .reader-book-pages{
 .rs-seg button:hover:not(.is-active){background:var(--r-hover)}
 .rs-seg button:focus-visible{outline:2px solid var(--r-accent);outline-offset:1px;opacity:1}
 
+/* Кастомный выбор (шрифт, начертание): системный <select> на e-ink WebView M7
+   показывает системный popup, который не рендерится (моргает / не открывается).
+   Поэтому поверх скрытого <select> рисуем кнопку + список в DOM (без popup). */
+.rs-selectx{position:relative;width:100%;max-width:100%}
+.rs-selectx>.rs-select{display:none !important}
+.rs-selectx-btn{
+  width:100%;box-sizing:border-box;display:flex;align-items:center;gap:6px;
+  padding:10px 12px;font:inherit;font-size:14px;font-weight:500;text-align:left;
+  color:var(--r-fg);background:transparent;border:1px solid var(--r-border);
+  border-radius:6px;cursor:pointer;outline:none;
+}
+.rs-selectx-btn:focus-visible{border-color:var(--r-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--r-accent) 12%,transparent)}
+.rs-selectx-btn[disabled]{opacity:.45;cursor:default}
+.rs-selectx-val{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs-selectx-chev{flex:0 0 auto;opacity:.5;font-size:12px}
+.rs-selectx-list{
+  /* inline-раскрытие в потоке панели (не absolute): не обрезается overflow:hidden
+     страницы настроек и нормально перерисовывается на e-ink. */
+  margin-top:6px;
+  max-height:min(46vh, 26rem);overflow-y:auto;
+  background:var(--r-surface);border:1px solid var(--r-border);border-radius:8px;
+  padding:4px;
+}
+.rs-selectx-list[hidden]{display:none}
+.rs-selectx-opt{
+  width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:10px 12px;margin:0;font:inherit;font-size:14px;font-weight:500;text-align:left;
+  color:var(--r-fg);background:transparent;border:0;border-radius:6px;cursor:pointer;outline:none;
+}
+.rs-selectx-opt:hover,.rs-selectx-opt:focus-visible{background:var(--r-hover)}
+.rs-selectx-opt.is-active{color:var(--r-accent);font-weight:700}
+.rs-selectx-opt .rs-selectx-check{opacity:0}
+.rs-selectx-opt.is-active .rs-selectx-check{opacity:1}
+.rs-selectx-group{padding:6px 12px 2px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;opacity:.5}
+html[data-eink="1"] .rs-selectx-btn{min-height:var(--lite-touch);border:2px solid var(--lite-line);background:var(--lite-surface);color:var(--lite-ink);font-weight:700}
+html[data-eink="1"] .rs-selectx-list{background:var(--lite-surface);border:2px solid var(--lite-line);box-shadow:none}
+html[data-eink="1"] .rs-selectx-opt{min-height:var(--lite-touch);color:var(--lite-ink);font-weight:600}
+html[data-eink="1"] .rs-selectx-opt.is-active{color:var(--lite-accent);font-weight:800}
+
 .rs-preset-seg{margin-bottom:8px}
 .rs-helper{font-size:11px;line-height:1.45;opacity:1;letter-spacing:.01em}
 
