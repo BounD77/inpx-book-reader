@@ -60,6 +60,15 @@
     refreshEinkScreen() {
       return postNative('refreshEinkScreen', {});
     },
+    getBatteryState() {
+      return postNative('getBatteryState', {});
+    },
+    getNetworkTransport() {
+      return postNative('getNetworkTransport', {});
+    },
+    getBluetoothEnabled() {
+      return postNative('getBluetoothEnabled', {});
+    },
     getWarmth() {
       return postNative('getWarmth', {});
     },
@@ -279,6 +288,13 @@
        со старым значением и следующее касание слайдера отбрасывает свет назад. */
     if (e.data?.type === 'inpx-native-event' && e.data.event === 'frontLight') {
       window.dispatchEvent(new CustomEvent('inpx-native-front-light', { detail: e.data.data }));
+    }
+    /* Статус-полоса: батарея / транспорт сети из натива. */
+    if (e.data?.type === 'inpx-native-event' && e.data.event === 'batteryChange') {
+      window.dispatchEvent(new CustomEvent('inpx-native-battery', { detail: e.data.data }));
+    }
+    if (e.data?.type === 'inpx-native-event' && e.data.event === 'networkTransport') {
+      window.dispatchEvent(new CustomEvent('inpx-native-network', { detail: e.data.data }));
     }
   });
 

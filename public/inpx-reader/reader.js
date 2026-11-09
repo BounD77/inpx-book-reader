@@ -136,6 +136,10 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
   const rssChapterLeft = $('rss-chapter-left');
   const rssPct = $('rss-pct');
   const rssClock = $('rss-clock');
+  const rssBattery = $('rss-battery');
+  const rssBatFill = $('rss-battery')?.querySelector('.rss-bat-fill');
+  const rssWifi = $('rss-wifi');
+  const rssBt = $('rss-bt');
   const autoFlipHud = $('reader-autoflip-hud');
   const gotoOverlay = $('reader-goto');
 
@@ -647,10 +651,10 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
     tapZonesLong: defaultTapZonesLong(),
     statusMode: 'always',
     statusShowChapter: true,
-    statusShowPct: true,
+    statusShowPct: false,
     statusShowPage: true,
     statusShowChapterLeft: false,
-    statusShowClock: false,
+    statusShowClock: true,
     // По умолчанию выкл: при открытии книги Foliate шлёт несколько relocate подряд,
     // а на каждом листании вибрация быстро утомляет.
     pageHaptic: false,
@@ -2284,7 +2288,7 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
     return `${hh}:${mm}`;
   }
 
-  /** % справа; generate-reader-html раньше клал его в mid — чиним в runtime. */
+  /** % справа; раскладка: часы/батарея/wifi слева, глава по центру, страницы справа. */
   function ensureStatusPctOnRight() {
     if (!rssPct || !statusStripEl) return;
     let right = statusStripEl.querySelector('.rss-right');
@@ -2294,6 +2298,43 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
       statusStripEl.appendChild(right);
     }
     if (rssPct.parentElement !== right) right.appendChild(rssPct);
+  }
+
+  /** Батарея / транспорт сети / bluetooth для статус-полосы. level<0 — неизвестно (иконка скрывается). */
+  let batteryLevel = -1;
+  let batteryCharging = false;
+  let netTransport = 'none';
+  let bluetoothEnabled = false;
+
+  function renderBattery() {
+    if (!rssBattery) return;
+    const ok = batteryLevel >= 0 && batteryLevel <= 100;
+    rssBattery.hidden = !ok;
+    if (!ok) return;
+    const pct = Math.max(0, Math.min(100, Math.round(batteryLevel)));
+    if (rssBatFill) {
+      const w = 26 * Math.max(0.12, pct / 100); // минимальная полоска, чтобы не «пусто»
+      rssBatFill.setAttribute('x', String(3 + (26 - w) / 2));
+      rssBatFill.setAttribute('width', String(w));
+    }
+    rssBattery.classList.toggle('is-charging', batteryCharging);
+  }
+
+  function renderNetIcon() {
+    if (!rssWifi) return;
+    const on = netTransport === 'wifi';
+    // SVG-элемент: свойства .hidden нет (только HTMLElement) — переключаем атрибут.
+    rssWifi.toggleAttribute('hidden', !on);
+    rssWifi.classList.toggle('is-off', !on);
+  }
+
+  function renderBtIcon() {
+    if (!rssBt) return;
+    rssBt.toggleAttribute('hidden', !bluetoothEnabled);
+  }
+
+  function updateStatusClock() {
+    if (rssClock && !rssClock.hidden) rssClock.textContent = formatStatusClock();
   }
 
   /** Высота статус-полосы для тостов/дока. Колонки книги не трогаем. */
@@ -2354,6 +2395,15 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
       rssClock.hidden = !S.statusShowClock;
       if (S.statusShowClock) rssClock.textContent = formatStatusClock();
     }
+    if (rssBattery) rssBattery.title = rt('app.statusBattery');
+    if (rssWifi) {
+      rssWifi.title = rt('app.statusWifi');
+      rssWifi.setAttribute('aria-label', rt('app.statusWifi'));
+    }
+    if (rssBt) {
+      rssBt.title = rt('app.statusBluetooth');
+      rssBt.setAttribute('aria-label', rt('app.statusBluetooth'));
+    }
 
     /* Дубли «67» / «714» по краям не нужны, пока strip уже показывает страницу */
     const stripOwnsPages = show && S.statusShowPage && lastPageInfo.total > 0;
@@ -2368,15 +2418,93 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
 
     clearInterval(statusClockTimer);
     statusClockTimer = null;
-    if (show && S.statusShowClock) {
-      statusClockTimer = setInterval(() => {
-        if (rssClock && !rssClock.hidden) rssClock.textContent = formatStatusClock();
-      }, 30_000);
+    if (show) {
+      statusClockTimer = setInterval(updateStatusClock, 10_000);
+      updateStatusClock();
     }
 
     applyStatusStripReserve(show);
   }
   window.__READER_SYNC_STATUS_STRIP__ = syncStatusStrip;
+
+  /* ===== Статус-полоса: батарея и wifi (нативные события + браузерный fallback) ===== */
+  (function initStatusStripDevice() {
+    const applyBattery = (level, charging) => {
+      const changed = level !== batteryLevel || charging !== batteryCharging;
+      batteryLevel = level;
+      batteryCharging = charging;
+      if (changed) {
+        renderBattery();
+        applyStatusStripReserve(statusStripEl && statusStripEl.classList.contains('is-visible'));
+      }
+    };
+    const applyTransport = (transport) => {
+      const changed = transport !== netTransport;
+      netTransport = transport || 'none';
+      if (changed) {
+        renderNetIcon();
+        applyStatusStripReserve(statusStripEl && statusStripEl.classList.contains('is-visible'));
+      }
+    };
+
+    const native = window.__INPX_NATIVE;
+    if (native && native.getBatteryState) {
+      native.getBatteryState()
+        .then((r) => applyBattery(Number(r?.level), Boolean(r?.charging)))
+        .catch(() => {});
+      native.getNetworkTransport()
+        .then((r) => applyTransport(r?.transport))
+        .catch(() => {});
+      const refreshBt = () => {
+        if (!native.getBluetoothEnabled) return;
+        native.getBluetoothEnabled()
+          .then((r) => {
+            const on = Boolean(r?.enabled);
+            if (on !== bluetoothEnabled) {
+              bluetoothEnabled = on;
+              renderBtIcon();
+              applyStatusStripReserve(statusStripEl && statusStripEl.classList.contains('is-visible'));
+            }
+          })
+          .catch(() => {});
+      };
+      refreshBt();
+      // Без разрешения BLUETOOTH_CONNECT натив не даёт событие смены — дёргаем
+      // при возвращении на экран (дешево) и раз в минуту, пока открыта книга.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') refreshBt();
+      });
+      setInterval(refreshBt, 60_000);
+      window.addEventListener('inpx-native-battery', (e) => {
+        applyBattery(Number(e.detail?.level), Boolean(e.detail?.charging));
+      });
+      window.addEventListener('inpx-native-network', (e) => {
+        applyTransport(e.detail?.transport);
+      });
+      renderBattery();
+      renderNetIcon();
+      renderBtIcon();
+      return;
+    }
+
+    /* Браузер: Battery Status API (на WebView 116 обычно нет — иконка остаётся скрытой). */
+    if (navigator.getBattery) {
+      const onBattery = (b) => {
+        const sync = () => applyBattery(
+          Math.round((b.level || 0) * 100),
+          Boolean(b.charging),
+        );
+        b.addEventListener('levelchange', sync);
+        b.addEventListener('chargingchange', sync);
+        sync();
+      };
+      try {
+        navigator.getBattery().then(onBattery).catch(() => {});
+      } catch { /* no battery API */ }
+    }
+    renderBattery();
+    renderNetIcon();
+  })();
 
   function autoFlipBlocked() {
     if (!autoFlipArmed || !(S.autoFlipSec > 0)) return true;
@@ -5348,6 +5476,18 @@ import { collapse, isMalformedLocationCfi } from '/foliate/epubcfi.js';
   }
   btnFullscreen?.addEventListener('click', toggleFullscreen);
   document.addEventListener('fullscreenchange', updateFullscreenIcon);
+  /** APK-режим: по умолчанию во весь экран (M7) — при запуске страницы ридера. */
+  if (document.documentElement.dataset.inpxApp === '1' || window.__READER_APP) {
+    if (!appImmersive) {
+      appImmersive = true;
+      try {
+        window.parent?.postMessage({ type: 'inpx-reader-immersive', enabled: true }, '*');
+      } catch { /* */ }
+      document.body.classList.add('is-immersive');
+      setChromeVisible(false);
+    }
+    updateFullscreenIcon();
+  }
 
   $('btn-day-night')?.addEventListener('click', () => {
     toggleDayNightTheme();

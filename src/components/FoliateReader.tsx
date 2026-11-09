@@ -965,10 +965,26 @@ export default function FoliateReader({
         data,
       }, '*');
     });
+    const batteryChange = ReaderNative.addListener('batteryChange', (data) => {
+      iframeRef.current?.contentWindow?.postMessage({
+        type: 'inpx-native-event',
+        event: 'batteryChange',
+        data,
+      }, '*');
+    });
+    const networkTransport = ReaderNative.addListener('networkTransport', (data) => {
+      iframeRef.current?.contentWindow?.postMessage({
+        type: 'inpx-native-event',
+        event: 'networkTransport',
+        data,
+      }, '*');
+    });
     return () => {
       void ttsEnd.then((h) => h.remove());
       void ttsStart.then((h) => h.remove());
       void ttsMediaAction.then((h) => h.remove());
+      void batteryChange.then((h) => h.remove());
+      void networkTransport.then((h) => h.remove());
       void ReaderNative.stopTts().catch(() => {});
       void ReaderNative.setMotionWatch({ enabled: false }).catch(() => {});
       void ReaderNative.updateTtsMediaSession({ active: false, playing: false }).catch(() => {});

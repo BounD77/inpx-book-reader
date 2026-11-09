@@ -63,6 +63,9 @@ interface ReaderNativePlugin {
   setLightSwipe(options: { enabled: boolean }): Promise<{ active: boolean; supported: boolean }>;
   setVolumeKeysCapture(options: { enabled: boolean }): Promise<{ enabled: boolean }>;
   refreshEinkScreen(): Promise<{ ok: boolean; supported: boolean; error?: string }>;
+  getBatteryState(): Promise<{ level: number; charging: boolean }>;
+  getNetworkTransport(): Promise<{ transport: 'wifi' | 'cellular' | 'other' | 'none' }>;
+  getBluetoothEnabled(): Promise<{ enabled: boolean }>;
   getWarmth(): Promise<FrontLightState & { supported?: boolean }>;
   getVoices(): Promise<ReaderVoicesResult>;
   /** `pitch` 0.5–2, `lang` BCP 47 (used when no voice is chosen); word ranges arrive as the `ttsRange` iframe event. */
@@ -94,6 +97,14 @@ interface ReaderNativePlugin {
     event: 'ttsMediaAction',
     handler: (data: { action: 'play' | 'pause' | 'stop' | 'prev' | 'next' | 'sleep'; seq?: number }) => void,
   ): Promise<{ remove: () => void }>;
+  addListener(
+    event: 'batteryChange',
+    handler: (data: { level: number; charging: boolean }) => void,
+  ): Promise<{ remove: () => void }>;
+  addListener(
+    event: 'networkTransport',
+    handler: (data: { transport: 'wifi' | 'cellular' | 'other' | 'none' }) => void,
+  ): Promise<{ remove: () => void }>;
 }
 
 export const ReaderNative = registerPlugin<ReaderNativePlugin>('ReaderNative');
@@ -117,6 +128,9 @@ export const READER_NATIVE_BRIDGE_METHODS = [
   'setWarmth',
   'setLightSwipe',
   'refreshEinkScreen',
+  'getBatteryState',
+  'getNetworkTransport',
+  'getBluetoothEnabled',
   'getWarmth',
   'getVoices',
   'speak',

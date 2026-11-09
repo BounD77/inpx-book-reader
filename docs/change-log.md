@@ -1,5 +1,53 @@
 # Change Log — INPX Book Reader MEEBOOK M7
 
+## 2026-11-09 — R1.13.0-m7.5 (задача 3: строка состояния — часы/батарея/wifi/глава/страницы)
+
+**Задача.** Раскладка строки состояния: слева — часы, затем иконка батареи,
+затем значок Wi-Fi (если подключён); по центру — название главы; справа —
+«прочитано / всего страниц».
+
+**Реализация.**
+- Натив `ReaderNativePlugin.java`: `getBatteryState()` (sticky-бroadкаст
+  `ACTION_BATTERY_CHANGED`: уровень 0–100 + `charging`), `getNetworkTransport()`
+  (`ConnectivityManager` → wifi/cellular/other/none), `getBluetoothEnabled()`
+  (`BluetoothAdapter.isEnabled()`; при `SecurityException` — fallback на
+  `Settings.Global "bluetooth_on"`, без разрешений; M7 live: `isEnabled()`
+  падает «Need BLUETOOTH permission»), события `batteryChange`/`networkTransport`
+  (BroadcastReceiver + NetworkCallback, регистрация в `load()`, снятие в
+  `handleOnDestroy()`).
+- Мост: `FoliateReader.tsx` форвардит события в iframe
+  (`inpx-native-event`), `readerNative.ts` — типы + whitelist,
+  `reader-native-bridge.js` — `getBatteryState()`/`getNetworkTransport()`/
+  `getBluetoothEnabled()` + кастом-события `inpx-native-battery`/
+  `inpx-native-network`.
+- Шаблон `generate-reader-html.mjs` (→ `index*.html`, v=b379e4c779b2):
+  слева часы → батарея (SVG 30px: корпус + rect-заполнение по уровню +
+  молния при зарядке) → wifi (виден только при transport=wifi) → bluetooth
+  (виден только когда адаптер включён); центр — глава; справа —
+  «N / M» (+опц. процент/осталось в главе).
+- `reader.js`: часы по умолчанию **вкл** (обновление каждые 10 с), процент —
+  **выкл** (тумблер остался, при вкл. идёт справа); батарея/wifi — событийно
+  (без опроса), bluetooth — опрос при запуске/return-на-экран/раз в минуту;
+  браузер — `navigator.getBattery()`, wifi/bt скрыты.
+  **Баг (найдён live-проверкой):** wifi/bt — `<svg>`, у SVG-элементов нет
+  отражаемого `.hidden` — `el.hidden = false` не снимал атрибут `hidden`,
+  CSS `[hidden]{display:none !important}` скрывал их всегда; фикс
+  `toggleAttribute('hidden', …)`.
+- **Полноэкранный режим по умолчанию в APK**: при запуске страницы ридера
+  `appImmersive=true` (postMessage host + `is-immersive` + chrome-hidden);
+  плитка «Весь экран» остаётся переключателем (M7, по запросу пользователя).
+- `reader.css`: `.rss-battery` (30px) / `.rss-bat-*` / `.rss-wifi` / `.rss-bt`
+  (монохром, e-ink-совместимые).
+- i18n: `app.statusBattery`/`app.statusWifi`/`app.statusBluetooth` (ru+en).
+
+**Проверка:** `npm run lint` — чисто; `npm test` — 480/480; APK собран и
+установлен на M7. Live-проверка строки состояния (по прямому разрешению):
+`12:02 · батарея(молния) · wifi · bluetooth | Глава … | 173/392` — все
+иконки на месте.
+
+**APK:** `builds/debug/app-debug.apk`, SHA-256
+`7b890daf746215b016f25bd673ce7737e8422ac331184772d43e8dba2aca9d36`
+
 ## 2026-11-09 — R1.13.0-m7.4 (задача 2: полноэкранный режим)
 
 **Задача.** Полноэкранный режим: заполнить место вверху (зона системного

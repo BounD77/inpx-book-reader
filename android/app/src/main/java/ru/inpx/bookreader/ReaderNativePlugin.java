@@ -1,10 +1,18 @@
 package ru.inpx.bookreader;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Insets;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.speech.tts.Voice;
 import android.util.Base64;
@@ -44,6 +52,16 @@ public class ReaderNativePlugin extends Plugin {
     }
     private final ExecutorService coverExecutor = Executors.newSingleThreadExecutor();
 
+    /** Статус-полоса читалки: батарея (sticky ACTION_BATTERY_CHANGED) и транспорт сети. */
+    private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            JSObject state = batteryState(intent);
+            notifyListeners("batteryChange", state);
+        }
+    };
+    private ConnectivityManager.NetworkCallback networkCallback;
+
     private void applySystemTextSelectionMenu(boolean enabled) {
         ReaderCapacitorWebView.setSystemTextSelectionMenuEnabled(enabled);
         if (getBridge() == null || getBridge().getWebView() == null) return;
@@ -69,6 +87,115 @@ public class ReaderNativePlugin extends Plugin {
         ttsManager = TtsPlaybackManager.getInstance(getContext());
         ttsManager.setUtteranceCallback((type, utteranceId, start, end) -> forwardTtsEventToReader(type, utteranceId, start, end));
         disableWebViewTextZoom();
+        startStatusStripWatchers();
+    }
+
+    /**
+     * Статус-полоса (часы/батарея/wifi): батарея — sticky-бroadкаст ACTION_BATTERY_CHANGED
+     * (без разрешений), транспорт — callback ConnectivityManager (без разрешений).
+     * События «batteryChange»/«networkTransport» идут в JS через notifyListeners.
+     */
+    private void startStatusStripWatchers() {
+        Context ctx = getContext();
+        if (ctx == null) return;
+        try {
+            ctx.registerReceiver(batteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        } catch (Throwable ignored) { /* sticky receiver */ }
+        ConnectivityManager cm = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm == null) return;
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(Network network) {
+                notifyListeners("networkTransport", new JSObject().put("transport", currentTransport()));
+            }
+
+            @Override
+            public void onLost(Network network) {
+                notifyListeners("networkTransport", new JSObject().put("transport", currentTransport()));
+            }
+
+            @Override
+            public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
+                notifyListeners("networkTransport", new JSObject().put("transport", currentTransport()));
+            }
+        };
+        try {
+            if (Build.VERSION.SDK_INT >= 24) {
+                cm.registerDefaultNetworkCallback(networkCallback);
+            } else {
+                cm.registerNetworkCallback(new NetworkRequest.Builder().build(), networkCallback);
+            }
+        } catch (Throwable ignored) { /* optional */ }
+    }
+
+    private JSObject batteryState(Intent sticky) {
+        JSObject out = new JSObject();
+        int level = -1;
+        int scale = 100;
+        boolean charging = false;
+        if (sticky != null) {
+            level = sticky.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            scale = sticky.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+            int status = sticky.getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN);
+            charging = status == BatteryManager.BATTERY_STATUS_CHARGING
+                || status == BatteryManager.BATTERY_STATUS_FULL;
+        }
+        out.put("level", scale > 0 && level >= 0 ? Math.round(100f * level / scale) : -1);
+        out.put("charging", charging);
+        return out;
+    }
+
+    private String currentTransport() {
+        Context ctx = getContext();
+        if (ctx == null) return "none";
+        try {
+            ConnectivityManager cm = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return "none";
+            Network active = cm.getActiveNetwork();
+            if (active == null) return "none";
+            NetworkCapabilities caps = cm.getNetworkCapabilities(active);
+            if (caps == null) return "none";
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return "wifi";
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) return "cellular";
+            return "other";
+        } catch (Throwable ignored) {
+            return "none";
+        }
+    }
+
+    @PluginMethod
+    public void getBatteryState(PluginCall call) {
+        Context ctx = getContext();
+        Intent sticky = null;
+        if (ctx != null) {
+            try {
+                sticky = ctx.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            } catch (Throwable ignored) { /* */ }
+        }
+        call.resolve(batteryState(sticky));
+    }
+
+    @PluginMethod
+    public void getNetworkTransport(PluginCall call) {
+        call.resolve(new JSObject().put("transport", currentTransport()));
+    }
+
+    /** Bluetooth: включён адаптер? isEnabled() у стороннего приложения требует
+        BLUETOOTH/BLUETOOTH_CONNECT (на M7 — SecurityException), поэтому при отказе
+        читаем системный переключатель Settings.Global "bluetooth_on" (без разрешений). */
+    @PluginMethod
+    public void getBluetoothEnabled(PluginCall call) {
+        boolean enabled = false;
+        try {
+            android.bluetooth.BluetoothAdapter a = android.bluetooth.BluetoothAdapter.getDefaultAdapter();
+            enabled = a != null && a.isEnabled();
+        } catch (Throwable t) {
+            try {
+                enabled = android.provider.Settings.Global.getInt(
+                    getContext().getContentResolver(), "bluetooth_on", 0) == 1;
+            } catch (Throwable ignored) { /* keep false */ }
+        }
+        call.resolve(new JSObject().put("enabled", enabled));
     }
 
     /**
@@ -110,6 +237,17 @@ public class ReaderNativePlugin extends Plugin {
         if (motionWatcher != null) motionWatcher.stop();
         FrontLightSwipe.setEnabled(false);
         coverExecutor.shutdownNow();
+        try {
+            getContext().unregisterReceiver(batteryReceiver);
+        } catch (Throwable ignored) { /* not registered */ }
+        if (networkCallback != null) {
+            try {
+                ConnectivityManager cm =
+                    (ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+                if (cm != null) cm.unregisterNetworkCallback(networkCallback);
+            } catch (Throwable ignored) { /* already gone */ }
+            networkCallback = null;
+        }
         if (instance == this) instance = null;
         super.handleOnDestroy();
     }

@@ -196,6 +196,8 @@
     "app.sectionText": "Text",
     "app.settings": "Settings",
     "app.statusAlways": "Always",
+    "app.statusBattery": "Battery",
+    "app.statusBluetooth": "Bluetooth",
     "app.statusChapter": "Chapter",
     "app.statusChapterLeft": "Left in chapter",
     "app.statusClock": "Clock",

@@ -599,6 +599,19 @@ body:has(.reader-status-strip.is-visible) .reader-footer .ft-chapter{
   min-width:3.2em;
 }
 .rss-right .rss-clock{flex:0 0 auto}
+.rss-left .rss-clock{font-variant-numeric:tabular-nums}
+/* Батарея: корпус + заполнение по уровню (JS двигает rect), молния при зарядке */
+.rss-battery{position:relative;width:30px;height:13px;flex:0 0 auto;display:inline-block}
+.rss-battery[hidden]{display:none !important}
+.rss-bat-ico{position:absolute;inset:0;width:100%;height:100%;color:var(--r-fg);opacity:.85}
+.rss-bat-shell{fill:none;stroke:currentColor;stroke-width:1.6}
+.rss-bat-cap{fill:currentColor}
+.rss-bat-fill{fill:currentColor}
+.rss-bat-bolt{position:absolute;left:9px;top:-1px;width:12px;height:16px;display:none;color:var(--r-accent)}
+.rss-battery.is-charging .rss-bat-bolt{display:block}
+/* Wi-Fi: виден, только когда transport = wifi; Bluetooth — только когда адаптер включён */
+.rss-wifi,.rss-bt{width:15px;height:15px;flex:0 0 auto;color:var(--r-fg);opacity:.85;fill:currentColor}
+.rss-wifi.is-off{display:none}
 .rss-item[hidden]{display:none !important}
 
 /* Пока видна строка состояния — боковые номера страниц скрыты (иначе наложение) */

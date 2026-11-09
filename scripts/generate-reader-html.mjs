@@ -330,10 +330,10 @@ function buildReaderHtml(lang) {
           </div>
           <div class="rs-group">
             <label class="rs-check"><span>${A('app.statusChapter')}</span><input type="checkbox" id="rs-status-chapter" name="statusChapter" checked></label>
-            <label class="rs-check"><span>${A('app.statusPct')}</span><input type="checkbox" id="rs-status-pct" name="statusPct" checked></label>
+            <label class="rs-check"><span>${A('app.statusPct')}</span><input type="checkbox" id="rs-status-pct" name="statusPct"></label>
             <label class="rs-check"><span>${A('app.sectionPage')}</span><input type="checkbox" id="rs-status-page" name="statusPage" checked></label>
             <label class="rs-check"><span>${A('app.statusChapterLeft')}</span><input type="checkbox" id="rs-status-chapter-left" name="statusChapterLeft"></label>
-            <label class="rs-check"><span>${A('app.statusClock')}</span><input type="checkbox" id="rs-status-clock" name="statusClock"></label>
+            <label class="rs-check"><span>${A('app.statusClock')}</span><input type="checkbox" id="rs-status-clock" name="statusClock" checked></label>
           </div>
         </section>
 
@@ -420,15 +420,18 @@ function buildReaderHtml(lang) {
       `$1
   <div class="reader-status-strip" id="reader-status-strip" aria-hidden="true">
     <div class="rss-side rss-left">
-      <span class="rss-item rss-chapter" id="rss-chapter" hidden></span>
+      <span class="rss-item rss-clock" id="rss-clock" hidden></span>
+      <span class="rss-item rss-battery" id="rss-battery" hidden><svg class="rss-bat-ico" viewBox="0 0 36 14" aria-hidden="true"><rect class="rss-bat-shell" x="1" y="1.2" width="30" height="11.6" rx="2"/><rect class="rss-bat-cap" x="32.4" y="4.4" width="2.8" height="5.2" rx="1.2"/><rect class="rss-bat-fill" x="3" y="3.4" width="26" height="7.2" rx="1"/></svg><svg class="rss-bat-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg></span>
+      <svg class="rss-item rss-wifi" id="rss-wifi" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg class="rss-item rss-bt" id="rss-bt" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/></svg>
     </div>
     <div class="rss-mid">
-      <span class="rss-item rss-page" id="rss-page" hidden></span>
-      <span class="rss-item rss-chapter-left" id="rss-chapter-left" hidden></span>
+      <span class="rss-item rss-chapter" id="rss-chapter" hidden></span>
     </div>
     <div class="rss-side rss-right">
-      <span class="rss-item rss-clock" id="rss-clock" hidden></span>
+      <span class="rss-item rss-page" id="rss-page" hidden></span>
       <span class="rss-item rss-pct" id="rss-pct" hidden></span>
+      <span class="rss-item rss-chapter-left" id="rss-chapter-left" hidden></span>
     </div>
   </div>
 
