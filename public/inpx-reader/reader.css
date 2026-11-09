@@ -29,6 +29,14 @@ html.status-strip-on,
 html:has(.reader-status-strip.is-visible){
   --r-status-h: calc(var(--r-status-body) + var(--r-safe-bottom));
 }
+/* Полноэкранный режим (плитка «Весь экран», body.is-immersive): статус-бар скрыт,
+   область чтения занимает весь экран — обнуляем safe-отступы (кроме собственной
+   статус-полосы ридера, --r-status-h). */
+body.is-immersive{
+  --r-safe-top: 0px;
+  --r-safe-bottom: 0px;
+  --r-bottom-reserve: max(0px, var(--r-status-h));
+}
 body:not(.chrome-hidden){
   --r-footer-stack: var(--r-footer-body);
 }

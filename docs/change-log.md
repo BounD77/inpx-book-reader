@@ -1,5 +1,34 @@
 # Change Log — INPX Book Reader MEEBOOK M7
 
+## 2026-11-09 — R1.13.0-m7.4 (задача 2: полноэкранный режим)
+
+**Задача.** Полноэкранный режим: заполнить место вверху (зона системного
+статус-бара) и немного расширить снизу; устранить «пустую полосу» на e-ink
+после скрытия статус-бара (симптом Haoqing, `fullscreen-analysis.md`).
+
+**Как воспроизводится.** Плитка «Весь экран» уже была (toolbar →
+`inpx-reader-immersive` → `StatusBar.hide/show`), но: (а) не было полного
+e-ink refresh после смены insets; (б) CSS-отступы не нольились. Добавлено:
+- `android/.../M7EpdRefresh.java` (новый) — e-ink refresh M7 (rk356x) через
+  скрытый статический `View.setHqEinkUpdateMode(int)` (full=2, part=7, fast=0,
+  реализация RK356xImpl Haoqing) + HiddenApiBypass. Детект:
+  `ro.board.platform == "rk356x"` ИЛИ бренд/модель Haoqing/MEEBOOK.
+  **Подтверждено на M7: `supported=true`** (logcat) — API резолвится из
+  обычного приложения, риск из отчёта снят.
+- `ReaderNativePlugin.java`: `refreshEinkScreen` — Onyx-провайдер, затем M7;
+  `getDeviceInfo` — поле `m7EpdRefresh`.
+- `FoliateReader.tsx`: после `StatusBar.hide()/show()` при `einkActive` —
+  `refreshEinkScreen()` (аналог `fullscreen_flush` Haoqing).
+- `reader.css`: `body.is-immersive` → `--r-safe-top:0; --r-safe-bottom:0;
+  --r-bottom-reserve:max(0px, var(--r-status-h))` — область чтения на весь
+  экран (сверху до края; снизу — только за вычетом статус-полосы ридера).
+
+**Проверка:** `npm run lint` — чисто; `npm test` — 480/480; APK собран и
+установлен на M7 (live-проверка UI — пользователем).
+
+**APK:** `builds/debug/app-debug.apk`, SHA-256
+`4c0b65973f35b0739f471602265d9c28e1e10d16c5180b71f96db9a647a9815f`
+
 ## 2026-11-09 — R1.13.0-m7.3 (задача 1: меню выбора шрифта + офлайн-шрифты)
 
 **Проблема.** На M7 «Шрифт»/«Начертание» в настройках — системные `<select>`:

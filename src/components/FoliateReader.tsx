@@ -898,6 +898,11 @@ export default function FoliateReader({
             } catch {
               // ignore
             }
+            // E-Ink: после смены insets — полный refresh (аналог "fullscreen_flush" Haoqing),
+            // иначе под бывшим статус-баром остаётся «пустая полоса».
+            if (einkActive) {
+              void ReaderNative.refreshEinkScreen().catch(() => {});
+            }
           })();
         }
         return;

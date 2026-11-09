@@ -294,32 +294,44 @@ public class ReaderNativePlugin extends Plugin {
             ret.put("onyxWarmth", OnyxFrontLight.hasWarmth(getContext()));
             ret.put("onyxEpdRefresh", OnyxEpdRefresh.isSupported());
         }
+        boolean m7Ok = M7EpdRefresh.isSupported();
+        ret.put("m7EpdRefresh", m7Ok);
+        if (m7Ok) {
+            ret.put("m7EpdRefreshError", M7EpdRefresh.lastError());
+        }
         call.resolve(ret);
     }
 
-    /** Полная перерисовка EPD (GC16) — против шлейфов на e-ink. */
+    /** Полная перерисовка EPD (GC16 Onyx / setHqEinkUpdateMode M7) — против шлейфов на e-ink. */
     @PluginMethod
     public void refreshEinkScreen(PluginCall call) {
         getActivity().runOnUiThread(() -> {
             JSObject ret = new JSObject();
-            boolean supported = OnyxEpdRefresh.isSupported();
-            ret.put("supported", supported);
-            if (!supported) {
+            boolean onyxOk = OnyxEpdRefresh.isSupported();
+            boolean m7Ok = M7EpdRefresh.isSupported();
+            ret.put("supported", onyxOk || m7Ok);
+            if (!onyxOk && !m7Ok) {
                 ret.put("ok", false);
                 ret.put("error", OnyxEpdRefresh.lastError());
                 call.resolve(ret);
                 return;
             }
-            View webView = getBridge() != null ? getBridge().getWebView() : null;
-            View decor = getActivity().getWindow() != null
-                ? getActivity().getWindow().getDecorView()
-                : null;
-            boolean ok = OnyxEpdRefresh.fullRefresh(webView);
-            if (!ok && decor != null && decor != webView) {
-                ok = OnyxEpdRefresh.fullRefresh(decor);
+            boolean ok = false;
+            if (onyxOk) {
+                View webView = getBridge() != null ? getBridge().getWebView() : null;
+                View decor = getActivity().getWindow() != null
+                    ? getActivity().getWindow().getDecorView()
+                    : null;
+                ok = OnyxEpdRefresh.fullRefresh(webView);
+                if (!ok && decor != null && decor != webView) {
+                    ok = OnyxEpdRefresh.fullRefresh(decor);
+                }
+            }
+            if (!ok && m7Ok) {
+                ok = M7EpdRefresh.fullRefresh();
             }
             ret.put("ok", ok);
-            if (!ok) ret.put("error", OnyxEpdRefresh.lastError());
+            if (!ok) ret.put("error", M7EpdRefresh.lastError());
             call.resolve(ret);
         });
     }
